@@ -9,13 +9,13 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'member_code', 'email', 'phone', 'password', 'is_active', 'last_seen_at'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'member_code', 'outlet_id', 'is_active', 'last_seen_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -30,9 +30,18 @@ class User extends Authenticatable implements FilamentUser
     {
         static::creating(function (self $user): void {
             if (! $user->member_code) {
-                $user->member_code = 'USR-' . Str::upper(Str::random(8));
+                $user->member_code = static::generateMemberCode();
             }
         });
+    }
+
+    public static function generateMemberCode(): string
+    {
+        do {
+            $code = 'MBR-'.str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
+        } while (static::where('member_code', $code)->exists());
+
+        return $code;
     }
 
     protected function casts(): array
@@ -52,6 +61,11 @@ class User extends Authenticatable implements FilamentUser
             RoleName::SuperAdmin->value,
             RoleName::Operator->value,
         ]);
+    }
+
+    public function outlet(): BelongsTo
+    {
+        return $this->belongsTo(Outlet::class);
     }
 
     public function walletTransactions(): HasMany
