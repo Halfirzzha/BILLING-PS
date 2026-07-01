@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Filament\Resources\PlaySessions\Pages;
+
+use App\Filament\Resources\PlaySessions\PlaySessionResource;
+use Filament\Resources\Pages\ListRecords;
+
+class ListPlaySessions extends ListRecords
+{
+    protected static string $resource = PlaySessionResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [];
+    }
+}
