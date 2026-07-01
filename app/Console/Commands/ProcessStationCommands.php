@@ -5,54 +5,47 @@ namespace App\Console\Commands;
 use App\Enums\StationCommandStatus;
 use App\Models\StationCommand;
 use App\Services\AdbService;
-use App\Services\StationDeviceService;
 use Illuminate\Console\Command;
 use Throwable;
 
 class ProcessStationCommands extends Command
 {
-    protected $signature = 'stations:process-commands {--once : Process only one batch and exit}';
+    protected $signature = 'stations:process-commands {--limit=50}';
 
-    protected $description = 'Process queued Android TV / ADB station commands.';
+    protected $description = 'Local ADB agent: execute pending device-level station commands via ADB.';
 
-    public function handle(AdbService $adbService, StationDeviceService $stationDeviceService): int
+    public function handle(AdbService $adb): int
     {
-        do {
-            $processed = false;
+        $commands = StationCommand::query()
+            ->where('status', StationCommandStatus::Pending->value)
+            ->whereIn('type', AdbService::ADB_TYPES)
+            ->whereHas('station', fn ($q) => $q->whereNotNull('adb_identifier'))
+            ->orderBy('id')
+            ->limit((int) $this->option('limit'))
+            ->get();
 
-            StationCommand::query()
-                ->where('status', StationCommandStatus::Queued->value)
-                ->oldest('id')
-                ->limit(20)
-                ->get()
-                ->each(function (StationCommand $command) use ($adbService, $stationDeviceService, &$processed): void {
-                    $processed = true;
+        foreach ($commands as $command) {
+            $command->update([
+                'status' => StationCommandStatus::Dispatched->value,
+                'dispatched_at' => now(),
+            ]);
 
-                    try {
-                        $command->update([
-                            'status' => StationCommandStatus::Sent->value,
-                            'sent_at' => now(),
-                            'attempts' => $command->attempts + 1,
-                        ]);
-
-                        $adbService->execute($command);
-                        $stationDeviceService->acknowledgeCommand($command, true);
-
-                        $this->info("Processed command #{$command->id} for {$command->station->code}");
-                    } catch (Throwable $throwable) {
-                        $stationDeviceService->acknowledgeCommand($command, false, $throwable->getMessage());
-                        $this->error("Command #{$command->id} failed: {$throwable->getMessage()}");
-                    }
-                });
-
-            if ($this->option('once')) {
-                break;
+            try {
+                $adb->execute($command);
+                $command->update([
+                    'status' => StationCommandStatus::Acknowledged->value,
+                    'acknowledged_at' => now(),
+                ]);
+            } catch (Throwable $e) {
+                $command->update([
+                    'status' => StationCommandStatus::Failed->value,
+                    'error' => mb_substr($e->getMessage(), 0, 500),
+                ]);
+                $this->error("Command #{$command->id} failed: {$e->getMessage()}");
             }
+        }
 
-            if (! $processed) {
-                sleep(2);
-            }
-        } while (true);
+        $this->info("Processed {$commands->count()} ADB command(s).");
 
         return self::SUCCESS;
     }
