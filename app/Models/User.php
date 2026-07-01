@@ -97,4 +97,9 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasRole(RoleName::Member->value);
     }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRole([RoleName::Developer->value, RoleName::SuperAdmin->value]);
+    }
 }
