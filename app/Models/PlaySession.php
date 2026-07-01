@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 #[Fillable(['outlet_id', 'station_id', 'user_id', 'status', 'payment_method', 'started_at', 'planned_end_at', 'ended_at', 'started_with_minutes', 'consumed_minutes', 'minutes_debited', 'ended_by', 'notes'])]
 class PlaySession extends Model
@@ -38,5 +39,12 @@ class PlaySession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function elapsedMinutes(?Carbon $at = null): int
+    {
+        $at ??= Carbon::now();
+
+        return max(0, (int) ceil($this->started_at->diffInSeconds($at) / 60));
     }
 }
