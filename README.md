@@ -1,84 +1,70 @@
-# Billing PS5
+# Billing PS5 + Android TV
 
-Platform billing rental PS5 + Android TV berbasis Laravel dan Filament.
+Platform SaaS multi-outlet untuk rental PlayStation 5 + Android TV, berbasis Laravel 13 + Filament 4.
+Inti sistem adalah **saldo waktu bermain (time balance)** per member yang bersifat global lintas outlet.
 
-## Fitur inti
+> Rebuild bertahap. Dokumen desain & rencana ada di `docs/superpowers/`.
+> Fase 1 (Fondasi) sudah selesai; fase berikutnya menyusul.
 
-- Member dengan `member_code`
-- Wallet top-up
-- Time balance / paket waktu
-- QR per station
-- Session billing per station
-- Dashboard admin Filament
-- Role/permission via Shield
-- Device orchestration untuk Android TV
-- Command queue untuk ADB automation
+## Konsep inti
 
-## URL utama
+- **Multi-tenant**: banyak outlet dikelola terpusat (single DB, row-level `outlet_id`).
+- **Wallet (uang)** & **Time balance (menit)** — keduanya global per member, diturunkan dari ledger.
+- **Play session** per station dengan **auto-stop** saat saldo waktu habis.
+- **Android TV** native app + **ADB** untuk orchestration/recovery.
+- **Role**: Developer (god mode), Super Admin (semua outlet), Operator/Kasir (1 outlet), Member.
 
-- Home: `/`
-- Portal member: `/portal`
-- Admin: `/admin/login`
-- TV display: `/tv/{station_code}`
-- Device API:
-  - `POST /api/device/stations/{station_code}/heartbeat`
-  - `GET /api/device/stations/{station_code}/commands/next`
-  - `POST /api/device/stations/{station_code}/commands/{id}/acknowledge`
+## Menjalankan secara lokal (Docker / Laravel Sail)
 
-## Akun demo
-
-- Admin: `admin@billingps5.local` / `password`
-- Member: `member@billingps5.local` / `password`
-
-## Menjalankan aplikasi
+Prasyarat: Docker Desktop.
 
 ```bash
-composer install
-npm install
-php artisan migrate:fresh --seed
-npm run build
-php artisan serve --host=127.0.0.1 --port=8001
+# 1. Siapkan environment
+cp .env.example .env            # (jika belum ada .env)
+
+# 2. Build & jalankan stack (app PHP 8.5 + MySQL 8.4 + Redis)
+./vendor/bin/sail up -d --build
+
+# 3. Generate app key (jika kosong) & migrasi + seed data demo
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate:fresh --seed
+
+# 4. Build asset frontend
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
 ```
 
-## Menjalankan processor ADB
+Aplikasi: http://localhost — Admin panel: http://localhost/admin
+
+Menghentikan: `./vendor/bin/sail down` (tambah `-v` untuk hapus volume DB).
+
+## Menjalankan test
+
+Test memakai SQLite in-memory (cepat, independen dari DB Docker):
 
 ```bash
-php artisan stations:process-commands
+./vendor/bin/sail artisan test      # di dalam Docker
+# atau, jika ada PHP lokal:
+php artisan test
 ```
 
-Perintah ini membaca command queue station dan mengeksekusi `adb` ke Android TV sesuai `adb_identifier` pada station.
+## Akun demo (password: `password`)
 
-## Konfigurasi ADB
+| Role | Email |
+|---|---|
+| Developer | `developer@billingps5.local` |
+| Super Admin | `superadmin@billingps5.local` |
+| Operator/Kasir | `operator@billingps5.local` |
+| Member | `member@billingps5.local` |
 
-Set `.env`:
+## Struktur domain (Fase 1)
 
-```env
-ADB_ENABLED=true
-ADB_BINARY=adb
-ADB_BROWSER_PACKAGE=com.android.chrome
-APP_URL=http://127.0.0.1:8001
-```
+- Tenancy: `outlets`, `users` (+ `outlet_id`), role/permission via spatie + Shield.
+- Uang & waktu: `time_packages`, `wallet_transactions` (ledger uang), `time_ledger_entries` (ledger waktu), `payments`.
+- Operasional: `stations`, `play_sessions`, `station_commands`.
+- Saldo diturunkan dari ledger: `wallet_balance = Σ amount (affects_balance)`, `remaining_minutes = max(0, Σ minutes)`.
 
-## Contoh integrasi Android TV client
+## Dokumentasi
 
-Header yang dipakai device:
-
-```http
-X-Station-Token: {device_token_station}
-```
-
-Flow device:
-
-1. Kirim heartbeat.
-2. Poll command berikutnya dari endpoint `commands/next`.
-3. Jalankan command di app Android TV atau daemon lokal.
-4. Kirim acknowledgement sukses/gagal.
-
-## Catatan arsitektur
-
-- User bermain memakai `time balance`.
-- Saldo waktu dicatat di `time_ledger_entries`.
-- Saldo uang dicatat di `wallet_transactions`.
-- TV Android bisa dikontrol oleh:
-  - Android TV app yang poll API device
-  - daemon lokal yang menjalankan `php artisan stations:process-commands`
+- Desain arsitektur: `docs/superpowers/specs/2026-07-01-billing-ps5-rebuild-design.md`
+- Rencana Fase 1: `docs/superpowers/plans/2026-07-01-phase-1-foundation.md`
