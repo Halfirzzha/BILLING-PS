@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'payment' => [
+        // Active online top-up gateway: fake (dev) | midtrans | xendit
+        'gateway' => env('PAYMENT_GATEWAY', 'fake'),
+    ],
+
 ];

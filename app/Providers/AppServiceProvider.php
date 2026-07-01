@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Enums\RoleName;
+use App\Services\Payments\FakePaymentGateway;
+use App\Services\Payments\PaymentGateway;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -13,7 +15,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PaymentGateway::class, function () {
+            return match (config('services.payment.gateway', 'fake')) {
+                // Add 'midtrans' / 'xendit' implementations here when credentials are available.
+                default => new FakePaymentGateway(),
+            };
+        });
     }
 
     /**

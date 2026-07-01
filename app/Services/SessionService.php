@@ -9,6 +9,8 @@ use App\Enums\StationCommandStatus;
 use App\Enums\StationCommandType;
 use App\Enums\StationStatus;
 use App\Enums\TimeLedgerType;
+use App\Events\SessionEnded;
+use App\Events\SessionStarted;
 use App\Jobs\EndExpiredSession;
 use App\Models\PlaySession;
 use App\Models\Station;
@@ -68,6 +70,7 @@ class SessionService
         });
 
         EndExpiredSession::dispatch($session->id)->delay($session->planned_end_at);
+        SessionStarted::dispatch($session);
 
         return $session;
     }
@@ -78,7 +81,7 @@ class SessionService
             throw new RuntimeException('Session is not active.');
         }
 
-        return DB::transaction(function () use ($session, $operator): PlaySession {
+        $ended = DB::transaction(function () use ($session, $operator): PlaySession {
             $consumed = $session->elapsedMinutes();
             $available = $session->user->remaining_minutes;
             $debit = min($consumed, $available);
@@ -114,6 +117,10 @@ class SessionService
 
             return $session->fresh();
         });
+
+        SessionEnded::dispatch($ended);
+
+        return $ended;
     }
 
     public function stopExpiredSessions(): int

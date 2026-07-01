@@ -17,6 +17,17 @@
         </div>
     </div>
 
+    {{-- Top up wallet online --}}
+    <form method="POST" action="{{ route('portal.topup') }}" class="mt-4 flex items-end gap-3 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+        @csrf
+        <div class="flex-1">
+            <label class="block text-xs uppercase tracking-wide text-slate-400">Top Up Wallet (online)</label>
+            <input name="amount" type="number" min="1000" step="1000" placeholder="cth. 50000"
+                class="mt-1 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 outline-none focus:border-amber-500">
+        </div>
+        <button class="rounded-xl bg-emerald-500 px-4 py-2.5 font-semibold text-slate-950 hover:bg-emerald-400">Top Up</button>
+    </form>
+
     {{-- Active session --}}
     @if ($activeSession)
         <div class="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
@@ -76,7 +87,7 @@
             <p class="text-sm text-slate-400">Belum ada paket tersedia.</p>
         @endforelse
     </div>
-    <p class="mt-3 text-xs text-slate-500">Top up saldo wallet dilakukan di kasir/operator.</p>
+    <p class="mt-3 text-xs text-slate-500">Top up bisa online (tombol di atas) atau lewat kasir/operator.</p>
 @endsection
 
 @section('scripts')

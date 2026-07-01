@@ -5,6 +5,7 @@ use App\Http\Controllers\Member\JoinController;
 use App\Http\Controllers\Member\PortalController;
 use App\Http\Controllers\Member\PurchaseController;
 use App\Http\Controllers\Member\SessionController;
+use App\Http\Controllers\Member\TopUpController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('landing'))->name('home');
@@ -24,4 +25,6 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/portal/purchase/{package}', [PurchaseController::class, 'store'])->name('portal.purchase');
     Route::post('/portal/session/start', [SessionController::class, 'start'])->name('portal.session.start');
     Route::post('/portal/session/end', [SessionController::class, 'end'])->name('portal.session.end');
+    Route::post('/portal/topup', [TopUpController::class, 'store'])->name('portal.topup');
+    Route::get('/portal/topup/{payment}/confirm', [TopUpController::class, 'confirm'])->name('portal.topup.confirm');
 });
