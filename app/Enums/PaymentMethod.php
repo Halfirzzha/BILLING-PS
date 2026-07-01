@@ -4,8 +4,8 @@ namespace App\Enums;
 
 enum PaymentMethod: string
 {
-    case Wallet = 'wallet';
     case Cash = 'cash';
-    case Transfer = 'transfer';
+    case Wallet = 'wallet';
+    case Gateway = 'gateway';
     case TimeBalance = 'time_balance';
 }

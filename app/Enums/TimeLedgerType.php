@@ -7,4 +7,5 @@ enum TimeLedgerType: string
     case Credit = 'credit';
     case SessionDebit = 'session_debit';
     case Adjustment = 'adjustment';
+    case Expiry = 'expiry';
 }
