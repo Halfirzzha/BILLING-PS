@@ -2,44 +2,32 @@
 
 namespace App\Models;
 
+use App\Enums\PlaySessionStatus;
+use App\Models\Concerns\BelongsToOutlet;
 use Database\Factories\PlaySessionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
-#[Fillable([
-    'user_id',
-    'station_id',
-    'time_package_id',
-    'status',
-    'payment_method',
-    'started_with_minutes',
-    'consumed_minutes',
-    'overage_minutes',
-    'started_at',
-    'ended_at',
-    'notes',
-    'meta',
-])]
+#[Fillable(['outlet_id', 'station_id', 'user_id', 'status', 'payment_method', 'started_at', 'planned_end_at', 'ended_at', 'started_with_minutes', 'consumed_minutes', 'minutes_debited', 'ended_by', 'notes'])]
 class PlaySession extends Model
 {
     /** @use HasFactory<PlaySessionFactory> */
     use HasFactory;
+    use BelongsToOutlet;
 
     protected function casts(): array
     {
         return [
+            'status' => PlaySessionStatus::class,
             'started_at' => 'datetime',
+            'planned_end_at' => 'datetime',
             'ended_at' => 'datetime',
-            'meta' => 'array',
+            'started_with_minutes' => 'integer',
+            'consumed_minutes' => 'integer',
+            'minutes_debited' => 'integer',
         ];
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     public function station(): BelongsTo
@@ -47,20 +35,8 @@ class PlaySession extends Model
         return $this->belongsTo(Station::class);
     }
 
-    public function timePackage(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(TimePackage::class);
-    }
-
-    public function elapsedMinutes(): int
-    {
-        $endAt = $this->ended_at ?? Carbon::now();
-
-        return max(1, (int) ceil($this->started_at->diffInSeconds($endAt) / 60));
-    }
-
-    public function remainingSessionMinutes(): int
-    {
-        return max(0, $this->started_with_minutes - $this->elapsedMinutes());
+        return $this->belongsTo(User::class);
     }
 }
